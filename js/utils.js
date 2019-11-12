@@ -1,21 +1,34 @@
 'use strict';
 
 (function () {
+  var Keycode = {
+    ESC: 27,
+    ENTER: 13
+  };
+
   window.utils = {
-    getRandomItem: function (arr) {
-      return arr[Math.round(Math.random() * (arr.length - 1))];
-    },
-    getRandomNumber: function (min, max) {
-      return Math.floor(min + Math.random() * (max + 1 - min));
-    },
-    randomizeArray: function (arr) {
-      for (var i = 0; i < arr.length; i++) {
-        var randomIndex = Math.floor(Math.random() * i);
-        var swap = arr[i];
-        arr[i] = arr[randomIndex];
-        arr[randomIndex] = swap;
+    isEscEvent: function (evt, action) {
+      if (evt.keyCode === Keycode.ESC) {
+        action();
       }
-      return arr;
+    },
+    isEnterEvent: function (evt, action) {
+      if (evt.keyCode === Keycode.ENTER) {
+        action();
+      }
+    },
+    debounce: function (fun) {
+      var DEBOUNCE_INTERVAL = 500;
+      var lastTimeout = null;
+      return function () {
+        var args = arguments;
+        if (lastTimeout) {
+          window.clearTimeout(lastTimeout);
+        }
+        lastTimeout = window.setTimeout(function () {
+          fun.apply(null, args);
+        }, DEBOUNCE_INTERVAL);
+      };
     }
   };
 })();

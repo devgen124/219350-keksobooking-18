@@ -1,92 +1,78 @@
 'use strict';
 
 (function () {
-  var MAIN_PIN_WIDTH = 62;
-  var MAIN_PIN_HEIGHT = 84;
+  var MainPinSize = {
+    WIDTH: 65,
+    SHORT_HEIGHT: 65,
+    LONG_HEIGHT: 84
+  };
 
   var map = document.querySelector('.map');
   var mainPin = document.querySelector('.map__pin--main');
-  var ads = [];
 
-  var updatePins = function () {
-    var FIXED_QUANTITY = 5;
-    var sum = null;
-    var filteredAds = ads
-    .filter(function (ad) {
-      return ad.offer.type === 'bungalo';
-    })
-    .filter(function () {
-      sum++;
-      return sum <= FIXED_QUANTITY;
+  var removePins = function () {
+    var pins = map.querySelectorAll('.map__pin:not(.map__pin--main)');
+    pins.forEach(function (pin) {
+      pin.remove();
     });
-    window.renderPins(filteredAds);
   };
 
   var onSuccessRenderPins = function (data) {
-    ads = data;
-    updatePins();
+    window.filter.setActive(data);
   };
 
   var onErrorShowPopup = function (errorMessage) {
-    var main = document.querySelector('main');
-    var errorTemplate = document.querySelector('#error').content.querySelector('.error');
-    var error = errorTemplate.cloneNode(true);
-    var errorButton = error.querySelector('button');
-    error.querySelector('p').textContent = errorMessage;
-    main.appendChild(error);
+    window.popup.showError(errorMessage);
+  };
 
-    var onClickReload = function () {
-      window.load(onSuccessRenderPins, onErrorShowPopup);
-      main.removeChild(error);
-      errorButton.removeEventListener('click', onClickReload);
+  var defaultPinPosition = {
+    x: parseInt(mainPin.style.left, 10),
+    y: parseInt(mainPin.style.top, 10)
+  };
+
+  var getDefaultCoords = function () {
+    var defaultPinCoords = {
+      x: Math.floor(defaultPinPosition.x + MainPinSize.WIDTH / 2),
+      y: Math.floor(defaultPinPosition.y + MainPinSize.LONG_HEIGHT / 2)
     };
-
-    errorButton.addEventListener('click', onClickReload);
+    return defaultPinCoords;
   };
 
-  var setInputsDisabled = function (collection, boolean) {
-    for (var i = 0; i < collection.length; i++) {
-      collection[i].disabled = boolean;
-    }
+  var resetPinPosition = function () {
+    mainPin.style.left = defaultPinPosition.x + 'px';
+    mainPin.style.top = defaultPinPosition.y + 'px';
   };
 
-  var setFormsDisabled = function (boolean) {
-    var mapForm = document.querySelector('.map__filters');
-    var mapFormSelects = mapForm.querySelectorAll('select');
-    var adForm = document.querySelector('.ad-form');
-    var adFormFieldsets = adForm.querySelectorAll('fieldset');
-
-    setInputsDisabled(mapFormSelects, boolean);
-    setInputsDisabled(adFormFieldsets, boolean);
+  var sendCoords = function () {
+    var mainPinCoords = {
+      x: Math.floor(parseInt(mainPin.style.left, 10) + MainPinSize.WIDTH / 2),
+      y: Math.floor(parseInt(mainPin.style.top, 10) + MainPinSize.LONG_HEIGHT)
+    };
+    return mainPinCoords;
   };
 
-  setFormsDisabled(true);
-
-  var viewPinPosition = function () {
-    var mainPinX = parseInt(mainPin.style.left, 10) + MAIN_PIN_WIDTH / 2;
-    var mainPinY = parseInt(mainPin.style.top, 10) + MAIN_PIN_HEIGHT;
-    var addressInput = document.querySelector('input#address');
-
-    addressInput.value = mainPinX + ', ' + mainPinY;
+  var resetMap = function () {
+    map.classList.add('map--faded');
+    resetPinPosition();
+    removePins();
+    window.card.remove();
+    window.filter.setInactive();
+    mainPin.addEventListener('mousedown', onMouseDownActivatePage);
+    mainPin.addEventListener('mousedown', onMouseDownGrabPin);
   };
 
-  viewPinPosition();
-
-  var onMouseDownActivateSite = function () {
-    var mapIsFaded = document.querySelector('.map').classList.contains('map--faded');
-
-    window.load(onSuccessRenderPins, onErrorShowPopup);
-    setFormsDisabled(false);
-
+  var activateMap = function () {
     map.classList.remove('map--faded');
-    document.querySelector('.ad-form').classList.remove('ad-form--disabled');
-
-    if (mapIsFaded) {
-      mainPin.removeEventListener('mousedown', onMouseDownActivateSite);
-    }
+    window.backend.download(onSuccessRenderPins, onErrorShowPopup);
   };
 
-  var onMouseDownCatchPin = function (evt) {
+  var onMouseDownActivatePage = function () {
+    activateMap();
+    window.form.setActive();
+    mainPin.removeEventListener('mousedown', onMouseDownActivatePage);
+  };
+
+  var onMouseDownGrabPin = function (evt) {
     evt.preventDefault();
     var startCoords = {
       x: evt.clientX,
@@ -95,10 +81,13 @@
 
     var onMouseMoveDragPin = function (moveEvt) {
       moveEvt.preventDefault();
-      var TOP_LIMIT = 130;
-      var BOTTOM_LIMIT = 630;
-      var LEFT_LIMIT = 0;
-      var RIGHT_LIMIT = 1200;
+      var Limit = {
+        TOP: 130,
+        LEFT: 0,
+        RIGHT: 1200,
+        BOTTOM: 630
+      };
+
       var shift = {
         x: startCoords.x - moveEvt.clientX,
         y: startCoords.y - moveEvt.clientY
@@ -114,13 +103,13 @@
         y: mainPin.offsetTop - shift.y
       };
 
-      if (pinCoords.y >= TOP_LIMIT - MAIN_PIN_HEIGHT && pinCoords.y <= BOTTOM_LIMIT - MAIN_PIN_HEIGHT) {
+      if (pinCoords.y >= Limit.TOP - MainPinSize.LONG_HEIGHT && pinCoords.y <= Limit.BOTTOM - MainPinSize.LONG_HEIGHT) {
         mainPin.style.top = pinCoords.y + 'px';
       }
-      if (pinCoords.x >= (LEFT_LIMIT - MAIN_PIN_WIDTH / 2) && pinCoords.x <= (RIGHT_LIMIT - MAIN_PIN_WIDTH / 2)) {
+      if (pinCoords.x >= (Limit.LEFT - MainPinSize.WIDTH / 2) && pinCoords.x <= (Limit.RIGHT - MainPinSize.WIDTH / 2)) {
         mainPin.style.left = pinCoords.x + 'px';
       }
-      viewPinPosition();
+      window.form.setAddress(pinCoords);
     };
 
     var onMouseUpDropPin = function (upEvt) {
@@ -128,13 +117,18 @@
 
       map.removeEventListener('mousemove', onMouseMoveDragPin);
       map.removeEventListener('mouseup', onMouseUpDropPin);
-      viewPinPosition();
     };
 
     map.addEventListener('mousemove', onMouseMoveDragPin);
     map.addEventListener('mouseup', onMouseUpDropPin);
   };
+  mainPin.addEventListener('mousedown', onMouseDownActivatePage);
+  mainPin.addEventListener('mousedown', onMouseDownGrabPin);
 
-  mainPin.addEventListener('mousedown', onMouseDownActivateSite);
-  mainPin.addEventListener('mousedown', onMouseDownCatchPin);
+  window.map = {
+    getDefaultCoords: getDefaultCoords,
+    sendActualCoords: sendCoords,
+    removePins: removePins,
+    reset: resetMap
+  };
 })();
