@@ -103,7 +103,7 @@
         y: mainPin.offsetTop - shift.y
       };
 
-      if (pinCoords.y >= Limit.TOP - MainPinSize.LONG_HEIGHT && pinCoords.y <= Limit.BOTTOM - MainPinSize.LONG_HEIGHT) {
+      if (pinCoords.y >= Limit.TOP && pinCoords.y <= Limit.BOTTOM) {
         mainPin.style.top = pinCoords.y + 'px';
       }
       if (pinCoords.x >= (Limit.LEFT - MainPinSize.WIDTH / 2) && pinCoords.x <= (Limit.RIGHT - MainPinSize.WIDTH / 2)) {
